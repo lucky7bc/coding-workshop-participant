@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Initiatives from './pages/Initiatives';
 import Resources from './pages/Resources';
+import Users from './pages/Users';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
@@ -40,6 +41,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Resources />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute>
+            <Users />
           </ProtectedRoute>
         }
       />
