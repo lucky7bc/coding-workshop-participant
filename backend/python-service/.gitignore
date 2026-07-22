@@ -1,0 +1,8 @@
+/*
+!/.gitignore
+!/app/
+!/scripts/
+!/function.py
+!/requirements.txt
+!/.env.example
+!/README.md
