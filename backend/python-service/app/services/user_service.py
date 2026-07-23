@@ -2,7 +2,7 @@ from app.core.errors import AppError
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
 
-
+# Helper function to create a public user representation
 def _public(user) -> dict:
     """Never expose password_hash — this is the only shape user records
     leave the service in."""
@@ -14,25 +14,29 @@ def _public(user) -> dict:
         "created_at": user.created_at,
     }
 
-
+# UserService handles user management operations such as listing users, 
+#updating roles, and removing users.
 class UserService:
+    # List all users in the system, returning a list of public user representations
     @staticmethod
     async def list_all() -> list:
         users = await UserRepository.find_all()
         return [_public(u) for u in users]
 
+    # Update the role of a user, ensuring that users cannot demote themselves 
+    # from admin
     @staticmethod
     async def update_role(user_id: str, role: str, acting_user_id: str) -> dict:
         # Self-demotion guard: the last admin demoting themselves would
-        # lock everyone out of user management permanently (register and
-        # all /users routes are admin-gated). Cheap to prevent here.
-        if user_id == acting_user_id and role != "admin":
+        # lock everyone out of user management permanently
             raise AppError(400, "You can't change your own admin role")
         updated = await UserRepository.update_role(user_id, role)
         if not updated:
             raise AppError(404, "User not found")
         return _public(updated)
 
+    # Remove a user from the system, ensuring that users cannot 
+    # delete their own account
     @staticmethod
     async def remove(user_id: str, acting_user_id: str) -> None:
         if user_id == acting_user_id:

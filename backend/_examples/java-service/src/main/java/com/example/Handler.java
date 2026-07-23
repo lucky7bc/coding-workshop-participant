@@ -165,6 +165,7 @@ public class Handler implements RequestHandler<Map<String, Object>, Map<String, 
      *
      * @param args command line arguments (unused)
      */
+    // Main method for local testing
     public static void main(String[] args) {
         Handler handler = new Handler();
         Map<String, Object> event = new HashMap<>();

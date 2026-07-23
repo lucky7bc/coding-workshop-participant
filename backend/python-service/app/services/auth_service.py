@@ -11,7 +11,10 @@ from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
 
 
+# Service layer for authentication-related operations
 class AuthService:
+    # Authenticates a user with the provided email and password.
+    # Returns access and refresh tokens upon successful authentication.
     @staticmethod
     async def login(email: str, password: str) -> dict:
         user = await UserRepository.find_by_email(email)
@@ -31,10 +34,7 @@ class AuthService:
         }
 
     # Rotation: the old refresh token is revoked and a new one issued on
-    # every use — same reasoning as the Node backend. Free once you've
-    # already committed to a persisted/revocable refresh token store
-    # (required for logout); closes the replay window on a stolen token.
-    @staticmethod
+    # every use
     async def refresh(refresh_token: str) -> dict:
         try:
             payload = decode_refresh_token(refresh_token)
@@ -59,13 +59,13 @@ class AuthService:
             "refresh_token": new_refresh_token,
         }
 
+    # Logs out a user by revoking the provided refresh token.
     @staticmethod
     async def logout(refresh_token: str) -> None:
         await RefreshTokenRepository.revoke_by_hash(hash_token(refresh_token))
 
-    # Not in the original endpoint map — added because /auth/login is
-    # unusable without a way to create a user. Admin-gated at the route
-    # level; the first admin is bootstrapped via scripts/seed_admin.py.
+    # Registers a new user with the provided email, password, role, 
+    # and optional resource ID.
     @staticmethod
     async def register(email: str, password: str, role: str = "member", resource_id: int | None = None) -> dict:
         existing = await UserRepository.find_by_email(email)

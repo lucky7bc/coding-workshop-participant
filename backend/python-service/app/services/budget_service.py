@@ -2,18 +2,19 @@ from app.core.errors import AppError
 from app.repositories.initiative_repository import InitiativeRepository
 from app.repositories.resource_repository import ResourceRepository
 
-
+# Service layer for budget-related operations
 class BudgetService:
+    # Retrieves a budget breakdown for a specific initiative,
+    # including total spend, remaining budget, weekly burn rate,
+    # projected spend at completion, and a detailed breakdown of
+    # resource allocations and costs.
     @staticmethod
     async def get_breakdown(initiative_id: int) -> dict:
         initiative = await InitiativeRepository.find_by_id(initiative_id)
         if not initiative:
             raise AppError(404, "Initiative not found")
 
-        # CONFIRMED: allocated_hours is hours/week (recurring).
-        # Weeks are CAPPED at time_allocated — without the cap, a
-        # current_week advanced past the plan keeps growing spend past the
-        # initiative's end, which is wrong.
+        # Allocated_hours is hours/week (recurring).
         effective_weeks = min(initiative.current_week, initiative.time_allocated)
 
         breakdown = []

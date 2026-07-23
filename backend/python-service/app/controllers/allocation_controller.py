@@ -1,14 +1,14 @@
 from fastapi import Depends
-
 from app.core.annotations import DeleteMapping, PatchMapping, PostMapping, RestController
 from app.core.database import get_db_client
 from app.core.dependencies import require_role
 from app.schemas.initiative_schemas import AllocationAdd, AllocationUpdate
 from app.services.allocation_service import AllocationService
 
-
+# Allocation Controller, which handles resource allocations for initiatives
 @RestController(prefix="/initiatives", tags=["Allocation"])
 class AllocationController:
+    # Add a resource allocation to a specific initiative
     @PostMapping("/{initiative_id}/resources", status_code=201)
     async def add_allocation(
         self, initiative_id: int, body: AllocationAdd, user: dict = Depends(require_role("admin"))
@@ -18,6 +18,7 @@ class AllocationController:
             client, initiative_id, body.resource_id, body.allocated_hours
         )
 
+    # Update the allocated hours for a specific resource in a specific initiative
     @PatchMapping("/{initiative_id}/resources/{resource_id}")
     async def update_allocation(
         self,
@@ -31,6 +32,7 @@ class AllocationController:
             client, initiative_id, resource_id, body.allocated_hours
         )
 
+    # Remove a resource allocation from a specific initiative
     @DeleteMapping("/{initiative_id}/resources/{resource_id}", status_code=204)
     async def remove_allocation(
         self, initiative_id: int, resource_id: int, user: dict = Depends(require_role("admin"))

@@ -5,8 +5,9 @@ from app.repositories.initiative_repository import InitiativeRepository
 from app.repositories.resource_repository import ResourceRepository
 
 
+# Service layer for allocation-related operations
 class AllocationService:
-    """Because the API commits to bidirectional embedding (an id array on
+    """The API commits to bidirectional embedding (an id array on
     each side), every allocation change is inherently a two-document write.
     Without a transaction, a crash between the two writes leaves the
     documents disagreeing about who's allocated to what. Same reasoning and
@@ -14,6 +15,10 @@ class AllocationService:
     transactions require a replica set (a single-node one is enough) — this
     will throw at runtime against a standalone mongod."""
 
+    # Retrieves a budget breakdown for a specific initiative,
+    # including total spend, remaining budget, weekly burn rate,
+    # projected spend at completion, and a detailed breakdown of
+    # resource allocations and costs.
     @staticmethod
     async def add_resource_to_initiative(client: AsyncMongoClient, initiative_id: int, resource_id: int, allocated_hours: float):
         async with client.start_session() as session:
@@ -34,6 +39,8 @@ class AllocationService:
 
         return await InitiativeRepository.find_by_id(initiative_id)
 
+    # Updates the allocated hours for a specific resource on a 
+    # specific initiative.
     @staticmethod
     async def update_allocated_hours(client: AsyncMongoClient, initiative_id: int, resource_id: int, allocated_hours: float):
         async with client.start_session() as session:
@@ -46,6 +53,9 @@ class AllocationService:
             raise AppError(404, "Allocation link not found — resource is not currently on this initiative")
         return updated
 
+    # Removes a resource from an initiative, ensuring that both 
+    # the initiative and resource documents are updated to reflect 
+    # the removal of the allocation link.
     @staticmethod
     async def remove_resource_from_initiative(client: AsyncMongoClient, initiative_id: int, resource_id: int):
         async with client.start_session() as session:
