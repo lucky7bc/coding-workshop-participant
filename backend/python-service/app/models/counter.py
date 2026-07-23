@@ -2,13 +2,8 @@ from beanie import Document
 from pymongo import ReturnDocument
 
 
+# Counter model for managing auto-incrementing sequences in MongoDB.
 class Counter(Document):
-    """Mongo has no native auto-increment. Both sample documents from the
-    original project cross-reference each other via a numeric `id` field
-    (never Mongo's own _id), so that id has to be assigned deterministically
-    — same reasoning as the Node backend's counter.model.ts. Uses the
-    sequence name directly as _id (Beanie allows overriding the id type)."""
-
     id: str  # sequence name (e.g. "resourceId", "initiativeId") acts as _id
     seq: int = 0
 
@@ -16,6 +11,7 @@ class Counter(Document):
         name = "counters"
 
 
+# Function to get the next sequence number for a given sequence name.
 async def next_sequence(name: str) -> int:
     collection = Counter.get_pymongo_collection()
     doc = await collection.find_one_and_update(

@@ -5,9 +5,8 @@ from pydantic import Field
 from pymongo import IndexModel
 
 
+# Deliverable model representing a deliverable entity in the database.
 class Deliverable(Document):
-    """Same reasoning as Milestone: own collection, own lifecycle, Mongo
-    _id used for :dId."""
 
     initiative_id: int
     name: str

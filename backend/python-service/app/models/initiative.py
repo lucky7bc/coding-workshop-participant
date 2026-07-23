@@ -5,22 +5,24 @@ from beanie import Document
 from pydantic import BaseModel, Field
 from pymongo import IndexModel
 
+# The InitiativeStatus type is a Literal type that defines the possible 
+# statuses for an initiative. It can be one of the following strings: 
+# "not_started", "in_progress", "at_risk", "delayed", or "completed". 
+# This allows for type checking and validation of the status field in the 
+# Initiative model.
 InitiativeStatus = Literal["not_started", "in_progress", "at_risk", "delayed", "completed"]
 
-
+# The InitiativeResourceLink model represents a link between an 
+# initiative and a resource.
 class InitiativeResourceLink(BaseModel):
-    """Mirror of ResourceInitiativeLink. The API's own language ("push IDs
-    to both arrays", "clean both arrays") commits to bidirectional
-    embedding rather than a normalized join collection, so this shape is
-    preserved from the original design, not replaced."""
 
     resource_id: int
     allocated_hours: float
 
 
+# The Initiative model represents an initiative entity in the database.
 class Initiative(Document):
-    # See resource.py for why this is a plain `numeric_id` field, not
-    # aliased to "id" — Beanie's own Document.id already owns that name.
+
     numeric_id: int
     name: str
     budget: float

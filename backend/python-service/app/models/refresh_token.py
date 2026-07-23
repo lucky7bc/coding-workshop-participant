@@ -5,6 +5,7 @@ from pydantic import Field
 from pymongo import IndexModel
 
 
+# RefreshToken model for managing refresh tokens in the database.
 class RefreshToken(Document):
     """Access tokens stay stateless (short TTL, unrevoked until expiry —
     accepted tradeoff). Refresh tokens must be persisted because logout

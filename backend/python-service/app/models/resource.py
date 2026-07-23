@@ -4,29 +4,18 @@ from beanie import Document
 from pydantic import BaseModel, Field
 from pymongo import IndexModel
 
-
+# Resource model and its associated link model for initiatives.
 class ResourceInitiativeLink(BaseModel):
-    """CORRECTED from the original sample document, which had a single flat
-    allocated_hours field on the resource itself — that shape can only hold
-    one value total, but the UI spec requires per-person, per-initiative
-    hours. Now an embedded list of (initiative_id, allocated_hours) pairs.
-    Same fix as the Node backend's resource.model.ts."""
-
+    # Mirror of InitiativeResourceLink. The API's own language ("push IDs
+    # to both arrays", "clean both arrays") commits to bidirectional
+    # embedding rather than a normalized join collection, so this shape is
+    # preserved from the original design, not replaced.
     initiative_id: int
     allocated_hours: float  # confirmed: hours/week, recurring — see budget_service.py
 
 
+# Resource model representing a resource entity in the database.
 class Resource(Document):
-    # NOTE: originally aliased to "id" to match the Node backend's field
-    # naming for cross-backend compatibility. That doesn't work — Beanie's
-    # own Document base class already owns a real field literally named
-    # `id` (mapped to Mongo's _id, typed PydanticObjectId), so aliasing a
-    # second field to that same name is a structural collision, not a
-    # call-site issue: Pydantic resolves it in favor of the literal field
-    # every time, silently routing values meant for this field into
-    # Beanie's ObjectId field instead. Since Python is now the only
-    # backend, there's no need to force this field to look like "id" in
-    # storage — it's just honestly named `numeric_id` here and in Mongo.
     numeric_id: int
     name: str
     rate: float  # hourly rate — confirmed flat per-resource, not per-initiative

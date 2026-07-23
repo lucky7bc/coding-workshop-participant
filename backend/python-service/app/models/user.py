@@ -5,14 +5,12 @@ from beanie import Document
 from pydantic import EmailStr, Field
 from pymongo import IndexModel
 
-
+# User roles: admin has full control, including user management; 
+# manager works with resources and initiatives.
 class User(Document):
-    """Login accounts only — distinct from Resource, which is a tracked
-    employee data record with no login. Two roles: admin (full control,
+    """Login accounts. Two roles: admin (full control,
     including user management) and manager (works with resources and
-    initiatives). Renamed from the earlier admin/member pair: 'member'
-    served no purpose once the conceptual split was clarified — regular
-    employees live as Resources and don't log in at all."""
+    initiatives)."""
 
     email: EmailStr
     password_hash: str
