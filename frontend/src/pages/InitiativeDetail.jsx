@@ -19,6 +19,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
@@ -76,6 +77,8 @@ export default function InitiativeDetail() {
   const [deliverables, setDeliverables] = useState([]);
   const [delivOpen, setDelivOpen] = useState(false);
   const [delivName, setDelivName] = useState('');
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', budget: '', time_allocated: '', current_week: '' });
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const isMobile = useIsMobile();
@@ -237,6 +240,47 @@ export default function InitiativeDetail() {
     }
   }
 
+  function openEditInitiative() {
+    setEditForm({
+      name: initiative.name,
+      budget: String(initiative.budget),
+      time_allocated: String(initiative.time_allocated),
+      current_week: String(initiative.current_week),
+    });
+    setEditOpen(true);
+  }
+
+  async function handleEditInitiative() {
+    setSaving(true);
+    setError('');
+    try {
+      await api.put(`/api/initiatives/${id}`, {
+        name: editForm.name,
+        budget: Number(editForm.budget),
+        time_allocated: Number(editForm.time_allocated),
+        current_week: Number(editForm.current_week),
+      });
+      setEditOpen(false);
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not update initiative.');
+      setEditOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteInitiative() {
+    if (!window.confirm(`Delete "${initiative.name}"? This can't be undone.`)) return;
+    setError('');
+    try {
+      await api.delete(`/api/initiatives/${id}`);
+      navigate('/initiatives', { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not delete initiative.');
+    }
+  }
+
   async function changeInitiativeStatus(next) {
     setStatusAnchor(null);
     setError('');
@@ -320,7 +364,21 @@ export default function InitiativeDetail() {
                   {initiative.resources.length} resource{initiative.resources.length === 1 ? '' : 's'} allocated
                 </Typography>
               </Box>
-              <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                {isAdmin && (
+                  <>
+                    <Tooltip title="Edit initiative">
+                      <IconButton aria-label="Edit initiative" size="small" onClick={openEditInitiative}>
+                        <EditIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete initiative">
+                      <IconButton aria-label="Delete initiative" size="small" onClick={handleDeleteInitiative}>
+                        <DeleteOutlineIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                )}
                 <Tooltip title={isAdmin ? 'Click to change status' : ''}>
                   <Chip
                     size="small"
@@ -638,6 +696,27 @@ export default function InitiativeDetail() {
             onClick={handleUpdateHours}
             disabled={saving || editHoursValue === '' || Number(editHoursValue) <= 0}
           >
+            {saving ? <CircularProgress size={20} /> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Edit initiative</DialogTitle>
+        <DialogContent>
+          <TextField label="Name" fullWidth margin="normal" value={editForm.name}
+            onChange={(event) => setEditForm((prev) => ({ ...prev, name: event.target.value }))} />
+          <TextField label="Budget" type="number" fullWidth margin="normal" value={editForm.budget}
+            onChange={(event) => setEditForm((prev) => ({ ...prev, budget: event.target.value }))} />
+          <TextField label="Duration (weeks)" type="number" fullWidth margin="normal" value={editForm.time_allocated}
+            onChange={(event) => setEditForm((prev) => ({ ...prev, time_allocated: event.target.value }))} />
+          <TextField label="Current week" type="number" fullWidth margin="normal" value={editForm.current_week}
+            onChange={(event) => setEditForm((prev) => ({ ...prev, current_week: event.target.value }))} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleEditInitiative}
+            disabled={saving || !editForm.name || editForm.budget === '' || Number(editForm.budget) <= 0 || editForm.time_allocated === '' || Number(editForm.time_allocated) <= 0 || editForm.current_week === '' || Number(editForm.current_week) < 0}>
             {saving ? <CircularProgress size={20} /> : 'Save'}
           </Button>
         </DialogActions>

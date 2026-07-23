@@ -16,6 +16,7 @@ class InitiativeUpdate(BaseModel):
     budget: float | None = None
     status: InitiativeStatus | None = None
     current_week: int | None = None
+    time_allocated: int | None = None
 
 
 class AllocationAdd(BaseModel):

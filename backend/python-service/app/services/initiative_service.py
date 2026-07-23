@@ -37,6 +37,12 @@ class InitiativeService:
 
     @staticmethod
     async def remove(numeric_id: int):
+        initiative = await InitiativeRepository.find_by_id(numeric_id)
+        if not initiative:
+            raise AppError(404, "Initiative not found")
+        from app.repositories.resource_repository import ResourceRepository
+        for link in initiative.resources:
+            await ResourceRepository.remove_initiative_link(link.resource_id, numeric_id, session=None)
         deleted = await InitiativeRepository.delete(numeric_id)
         if not deleted:
             raise AppError(404, "Initiative not found")

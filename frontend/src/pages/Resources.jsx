@@ -12,6 +12,8 @@ import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import SearchIcon from '@mui/icons-material/Search';
 import Toolbar from '@mui/material/Toolbar';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
@@ -103,6 +105,7 @@ export default function Resources() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const isMobile = useIsMobile();
@@ -129,6 +132,10 @@ export default function Resources() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const visibleResources = resources.filter((resource) =>
+    resource.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   function openCreate() {
     setEditing(null);
@@ -217,6 +224,11 @@ export default function Resources() {
           </Box>
         )}
 
+        <TextField size="small" placeholder="Search resources" value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          sx={{ mb: 2, width: '100%', maxWidth: 320 }}
+          InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: '#888780' }} /></InputAdornment>) }} />
+
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -233,9 +245,13 @@ export default function Resources() {
               No resources yet.{isAdmin ? ' Add one to get started.' : ''}
             </Typography>
           </Paper>
+        ) : visibleResources.length === 0 ? (
+          <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary">No resources match your search.</Typography>
+          </Paper>
         ) : (
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 2 }}>
-            {resources.map((resource) => {
+            {visibleResources.map((resource) => {
               const totalHours = resource.initiatives.reduce((sum, link) => sum + link.allocated_hours, 0);
               const count = resource.initiatives.length;
               const level = overallLevel(count, totalHours);

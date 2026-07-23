@@ -12,7 +12,10 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import SearchIcon from '@mui/icons-material/Search';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -65,6 +68,8 @@ export default function Initiatives() {
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const isMobile = useIsMobile();
@@ -108,6 +113,12 @@ export default function Initiatives() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const visibleInitiatives = initiatives.filter((initiative) => {
+    const matchesSearch = initiative.name.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || initiative.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   async function handleCreate() {
     setSaving(true);
@@ -173,6 +184,19 @@ export default function Initiatives() {
           </Box>
         )}
 
+        <Box sx={{ display: 'flex', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
+          <TextField size="small" placeholder="Search initiatives" value={search}
+            onChange={(event) => setSearch(event.target.value)} sx={{ flex: 1, minWidth: 200 }}
+            InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: '#888780' }} /></InputAdornment>) }} />
+          <TextField select size="small" value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)} sx={{ minWidth: 150 }}>
+            <MenuItem value="all">All statuses</MenuItem>
+            {Object.entries(STATUS_STYLE).map(([value, style]) => (
+              <MenuItem key={value} value={value}>{style.label}</MenuItem>
+            ))}
+          </TextField>
+        </Box>
+
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -189,6 +213,10 @@ export default function Initiatives() {
               No initiatives yet.{isAdmin ? ' Create one to get started.' : ''}
             </Typography>
           </Paper>
+        ) : visibleInitiatives.length === 0 ? (
+          <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary">No initiatives match your search.</Typography>
+          </Paper>
         ) : (
           <Box
             sx={{
@@ -197,7 +225,7 @@ export default function Initiatives() {
               gap: 2,
             }}
           >
-            {initiatives.map((initiative) => {
+            {visibleInitiatives.map((initiative) => {
               const spend = computeSpend(initiative, ratesById);
               const pct = initiative.budget > 0 ? (spend / initiative.budget) * 100 : 0;
               const status = STATUS_STYLE[initiative.status] ?? STATUS_STYLE.not_started;
