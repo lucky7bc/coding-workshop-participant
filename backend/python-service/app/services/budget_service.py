@@ -10,32 +10,41 @@ class BudgetService:
         if not initiative:
             raise AppError(404, "Initiative not found")
 
+        # CONFIRMED: allocated_hours is hours/week (recurring).
+        # Weeks are CAPPED at time_allocated — without the cap, a
+        # current_week advanced past the plan keeps growing spend past the
+        # initiative's end, which is wrong.
+        effective_weeks = min(initiative.current_week, initiative.time_allocated)
+
         breakdown = []
+        weekly_burn = 0.0
         for link in initiative.resources:
             resource = await ResourceRepository.find_by_id(link.resource_id)
-
-            # CONFIRMED: allocated_hours is hours/week (recurring), not a
-            # one-time total or an FTE fraction. Cost = hours/week × weeks
-            # elapsed × hourly rate. Same confirmed assumption as the Node
-            # backend's budget.service.ts.
-            cost = link.allocated_hours * initiative.current_week * resource.rate if resource else 0
-
+            rate = resource.rate if resource else 0
+            cost = link.allocated_hours * effective_weeks * rate
+            weekly_burn += link.allocated_hours * rate
             breakdown.append(
                 {
                     "resource_id": link.resource_id,
                     "resource_name": resource.name if resource else "Unknown (resource deleted)",
                     "allocated_hours": link.allocated_hours,
-                    "rate": resource.rate if resource else 0,
+                    "rate": rate,
                     "cost": cost,
                 }
             )
 
         total_spend = sum(item["cost"] for item in breakdown)
+        # Pace projection: if current allocations run for the full planned
+        # duration, total spend lands here. Same data, one multiplication —
+        # answers "are we going to blow the budget" before it happens.
+        projected_at_completion = weekly_burn * initiative.time_allocated
 
         return {
             "initiative_id": initiative_id,
             "budget": initiative.budget,
             "total_spend": total_spend,
             "remaining": initiative.budget - total_spend,
+            "weekly_burn": weekly_burn,
+            "projected_at_completion": projected_at_completion,
             "breakdown": breakdown,
         }

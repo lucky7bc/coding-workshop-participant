@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Initiatives from './pages/Initiatives';
 import Resources from './pages/Resources';
 import Users from './pages/Users';
+import InitiativeDetail from './pages/InitiativeDetail';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
@@ -49,6 +50,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Users />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/initiatives/:id"
+        element={
+          <ProtectedRoute>
+            <InitiativeDetail />
           </ProtectedRoute>
         }
       />
