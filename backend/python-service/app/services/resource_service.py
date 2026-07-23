@@ -29,6 +29,12 @@ class ResourceService:
 
     @staticmethod
     async def remove(numeric_id: int):
+        resource = await ResourceRepository.find_by_id(numeric_id)
+        if not resource:
+            raise AppError(404, "Resource not found")
+        from app.repositories.initiative_repository import InitiativeRepository
+        for link in resource.initiatives:
+            await InitiativeRepository.remove_resource_link(link.initiative_id, numeric_id, session=None)
         deleted = await ResourceRepository.delete(numeric_id)
         if not deleted:
             raise AppError(404, "Resource not found")
