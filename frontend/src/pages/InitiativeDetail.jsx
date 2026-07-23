@@ -28,6 +28,9 @@ import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useColorMode } from '../context/ColorModeContext';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useIsMobile } from '../hooks/useResponsive';
 
 const NAVY_DEEP = '#042C53';
@@ -37,7 +40,7 @@ const NAVY = '#0C447C';
 const SEGMENT_COLORS = ['#0C447C', '#378ADD', '#85B7EB', '#1D9E75', '#D85A30', '#7F77DD'];
 
 const STATUS_META = {
-  pending: { label: 'Pending', color: '#888780', bg: '#F1EFE8', icon: <ScheduleIcon sx={{ fontSize: 14 }} /> },
+  pending: { label: 'Pending', color: 'text.secondary', bg: '#F1EFE8', icon: <ScheduleIcon sx={{ fontSize: 14 }} /> },
   in_progress: { label: 'In progress', color: '#185FA5', bg: '#E6F1FB', icon: <AutorenewIcon sx={{ fontSize: 14 }} /> },
   complete: { label: 'Complete', color: '#0F6E56', bg: '#E1F5EE', icon: <CheckIcon sx={{ fontSize: 14 }} /> },
   missed: { label: 'Missed', color: '#A32D2D', bg: '#FCEBEB', icon: <PriorityHighIcon sx={{ fontSize: 14 }} /> },
@@ -81,6 +84,7 @@ export default function InitiativeDetail() {
   const [editForm, setEditForm] = useState({ name: '', budget: '', time_allocated: '', current_week: '' });
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { mode, toggle } = useColorMode();
   const isMobile = useIsMobile();
   const isAdmin = user?.role === 'admin';
 
@@ -334,6 +338,13 @@ export default function InitiativeDetail() {
                 {user.email}
               </Typography>
             )}
+                        <IconButton
+              aria-label={mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              size="small"
+              onClick={toggle}
+            >
+              {mode === 'light' ? <Brightness4Icon fontSize="small" /> : <Brightness7Icon fontSize="small" />}
+            </IconButton>
             <Button onClick={handleLogout} size="small">
               Sign out
             </Button>
@@ -356,10 +367,10 @@ export default function InitiativeDetail() {
           <>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
               <Box>
-                <Typography sx={{ fontSize: 20, fontWeight: 500, color: NAVY_DEEP }}>
+                <Typography sx={{ fontSize: 20, fontWeight: 500, color: 'text.primary' }}>
                   {initiative.name}
                 </Typography>
-                <Typography sx={{ fontSize: 13, color: '#888780' }}>
+                <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
                   Week {initiative.current_week} of {initiative.time_allocated} ·{' '}
                   {initiative.resources.length} resource{initiative.resources.length === 1 ? '' : 's'} allocated
                 </Typography>
@@ -413,7 +424,7 @@ export default function InitiativeDetail() {
             {budget && (
               <Box sx={{ mb: 4 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography sx={{ fontSize: 13, fontWeight: 500, color: '#5F5E5A' }}>
+                  <Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.secondary' }}>
                     Spend by resource
                   </Typography>
                   <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
@@ -434,17 +445,17 @@ export default function InitiativeDetail() {
                 </Box>
                 <Box sx={{ display: 'flex', gap: 2.25, mt: 1, flexWrap: 'wrap' }}>
                   {budget.breakdown.map((item, index) => (
-                    <Typography key={item.resource_id} sx={{ fontSize: 12, color: '#5F5E5A', display: 'flex', alignItems: 'center', gap: 0.6 }}>
+                    <Typography key={item.resource_id} sx={{ fontSize: 12, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.6 }}>
                       <Box sx={{ width: 10, height: 10, bgcolor: SEGMENT_COLORS[index % SEGMENT_COLORS.length], borderRadius: '2px' }} />
                       {item.resource_name} {money(item.cost)}
                     </Typography>
                   ))}
-                  <Typography sx={{ fontSize: 12, color: '#888780', display: 'flex', alignItems: 'center', gap: 0.6 }}>
+                  <Typography sx={{ fontSize: 12, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.6 }}>
                     <Box sx={{ width: 10, height: 10, bgcolor: '#F1EFE8', border: '0.5px solid #D3D1C7', borderRadius: '2px' }} />
                     Remaining {money(budget.remaining)}
                   </Typography>
                 </Box>
-                <Typography sx={{ fontSize: 12, color: budget.projected_at_completion > budget.budget ? '#A32D2D' : '#888780', mt: 1 }}>
+                <Typography sx={{ fontSize: 12, color: budget.projected_at_completion > budget.budget ? '#A32D2D' : 'text.secondary', mt: 1 }}>
                   {money(budget.weekly_burn)}/week burn · projected {money(budget.projected_at_completion)} by week {initiative.time_allocated}
                   {budget.projected_at_completion > budget.budget ? ' — over budget at this pace' : ''}
                 </Typography>
@@ -452,7 +463,7 @@ export default function InitiativeDetail() {
             )}
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-              <Typography sx={{ fontSize: 15, fontWeight: 500, color: NAVY_DEEP }}>Allocated resources</Typography>
+              <Typography sx={{ fontSize: 15, fontWeight: 500, color: 'text.primary' }}>Allocated resources</Typography>
               {isAdmin && (
                 <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => setAllocOpen(true)}>
                   Allocate resource
@@ -461,7 +472,7 @@ export default function InitiativeDetail() {
             </Box>
             <Box sx={{ mb: 4 }}>
               {initiative.resources.length === 0 ? (
-                <Typography sx={{ fontSize: 13, color: '#888780' }}>
+                <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
                   No resources allocated.{isAdmin ? ' Allocate one to start tracking spend.' : ''}
                 </Typography>
               ) : (
@@ -474,7 +485,7 @@ export default function InitiativeDetail() {
                     >
                       <Typography sx={{ fontSize: 14 }}>
                         {resource ? resource.name : `Resource ${link.resource_id}`}
-                        <Box component="span" sx={{ color: '#888780', fontSize: 13 }}>
+                        <Box component="span" sx={{ color: 'text.secondary', fontSize: 13 }}>
                           {' '}· {link.allocated_hours} hrs/week{resource ? ` · $${resource.rate.toLocaleString()}/hr` : ''}
                         </Box>
                       </Typography>
@@ -505,7 +516,7 @@ export default function InitiativeDetail() {
             </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography sx={{ fontSize: 15, fontWeight: 500, color: NAVY_DEEP }}>Milestones</Typography>
+              <Typography sx={{ fontSize: 15, fontWeight: 500, color: 'text.primary' }}>Milestones</Typography>
               {isAdmin && (
                 <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => setAddOpen(true)}>
                   Add milestone
@@ -514,7 +525,7 @@ export default function InitiativeDetail() {
             </Box>
 
             {milestones.length === 0 ? (
-              <Typography sx={{ fontSize: 13, color: '#888780' }}>
+              <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
                 No milestones yet.{isAdmin ? ' Add the first one.' : ''}
               </Typography>
             ) : (
@@ -547,9 +558,9 @@ export default function InitiativeDetail() {
                       </Box>
                       <Box sx={{ pb: isLast ? 0 : 2.25, display: 'flex', alignItems: 'flex-start', gap: 1, flex: 1 }}>
                         <Box sx={{ flex: 1 }}>
-                          <Typography sx={{ fontSize: 14, fontWeight: 500, color: '#2C2C2A' }}>
+                          <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'text.primary' }}>
                             {milestone.name}{' '}
-                            <Box component="span" sx={{ fontWeight: 400, color: '#888780' }}>
+                            <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary' }}>
                               · week {milestone.target_week}
                             </Box>
                           </Typography>
@@ -572,10 +583,10 @@ export default function InitiativeDetail() {
             )}
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, mb: 1.5 }}>
-              <Typography sx={{ fontSize: 15, fontWeight: 500, color: NAVY_DEEP }}>
+              <Typography sx={{ fontSize: 15, fontWeight: 500, color: 'text.primary' }}>
                 Deliverables
                 {deliverables.length > 0 && (
-                  <Box component="span" sx={{ fontWeight: 400, fontSize: 13, color: '#888780', ml: 1 }}>
+                  <Box component="span" sx={{ fontWeight: 400, fontSize: 13, color: 'text.secondary', ml: 1 }}>
                     {deliverables.filter((d) => d.completed).length} of {deliverables.length} complete
                   </Box>
                 )}
@@ -587,7 +598,7 @@ export default function InitiativeDetail() {
               )}
             </Box>
             {deliverables.length === 0 ? (
-              <Typography sx={{ fontSize: 13, color: '#888780' }}>
+              <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
                 No deliverables yet.{isAdmin ? ' Add the first one.' : ''}
               </Typography>
             ) : (
@@ -614,7 +625,7 @@ export default function InitiativeDetail() {
                       sx={{
                         fontSize: 14,
                         flex: 1,
-                        color: deliverable.completed ? '#888780' : '#2C2C2A',
+                        color: deliverable.completed ? 'text.secondary' : 'text.primary',
                         textDecoration: deliverable.completed ? 'line-through' : 'none',
                       }}
                     >

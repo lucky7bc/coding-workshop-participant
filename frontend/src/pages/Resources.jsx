@@ -26,6 +26,9 @@ import WorkIcon from '@mui/icons-material/Work';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useColorMode } from '../context/ColorModeContext';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useIsMobile } from '../hooks/useResponsive';
 
 const NAVY = '#0C447C';
@@ -108,6 +111,7 @@ export default function Resources() {
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { mode, toggle } = useColorMode();
   const isMobile = useIsMobile();
   const isAdmin = user?.role === 'admin';
 
@@ -208,6 +212,13 @@ export default function Resources() {
                 {user.email}
               </Typography>
             )}
+                        <IconButton
+              aria-label={mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              size="small"
+              onClick={toggle}
+            >
+              {mode === 'light' ? <Brightness4Icon fontSize="small" /> : <Brightness7Icon fontSize="small" />}
+            </IconButton>
             <Button onClick={handleLogout} size="small">
               Sign out
             </Button>
@@ -227,7 +238,7 @@ export default function Resources() {
         <TextField size="small" placeholder="Search resources" value={search}
           onChange={(event) => setSearch(event.target.value)}
           sx={{ mb: 2, width: '100%', maxWidth: 320 }}
-          InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: '#888780' }} /></InputAdornment>) }} />
+          InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} /></InputAdornment>) }} />
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -289,7 +300,7 @@ export default function Resources() {
 
                   <Box sx={{ px: 1.75, pt: 1, pb: 0.5 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography sx={{ fontSize: 11, fontWeight: 500, color: '#5F5E5A' }}>{totalHours} / {MAX_HOURS} hrs/week</Typography>
+                      <Typography sx={{ fontSize: 11, fontWeight: 500, color: 'text.secondary' }}>{totalHours} / {MAX_HOURS} hrs/week</Typography>
                       <Typography sx={{ fontSize: 11, fontWeight: 500, color: styles.pctColor }}>{Math.round(hoursPct)}%{totalHours > MAX_HOURS ? ' — over' : ''}</Typography>
                     </Box>
                     <Box sx={{ bgcolor: '#F1EFE8', borderRadius: '4px', height: 6, overflow: 'hidden' }}>
@@ -306,16 +317,16 @@ export default function Resources() {
                   )}
 
                   <Box sx={{ p: 1.75 }}>
-                    <Typography sx={{ fontSize: 12, fontWeight: 500, color: '#5F5E5A', mb: 1 }}>Allocations</Typography>
+                    <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'text.secondary', mb: 1 }}>Allocations</Typography>
                     {resource.initiatives.length === 0 ? (
-                      <Typography sx={{ fontSize: 12, color: '#888780' }}>None yet</Typography>
+                      <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>None yet</Typography>
                     ) : (
                       resource.initiatives.map((link) => {
                         const name = initiativeNames[link.initiative_id] ?? `Initiative ${link.initiative_id}`;
                         return (
                           <Box key={link.initiative_id} sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, py: 0.75, '&:not(:last-child)': { borderBottom: '0.5px solid', borderColor: 'divider' } }}>
                             <Tooltip title={name}>
-                              <Typography sx={{ fontSize: 13, color: '#2C2C2A', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                              <Typography sx={{ fontSize: 13, color: 'text.primary', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                 {name}
                               </Typography>
                             </Tooltip>

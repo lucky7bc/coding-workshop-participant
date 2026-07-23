@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
 import Skeleton from '@mui/material/Skeleton';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -12,6 +13,9 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useColorMode } from '../context/ColorModeContext';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useIsDesktop, useIsMobile } from '../hooks/useResponsive';
 
 const NAVY = '#0C447C';
@@ -60,7 +64,7 @@ function StatTile({ inverted, icon, count, loading, label, hint, onClick }) {
             {count}
           </Typography>
         )}
-        <Typography sx={{ fontSize: 14, color: inverted ? '#5F5E5A' : BLUE_PALE, mt: 0.25 }}>
+        <Typography sx={{ fontSize: 14, color: inverted ? 'text.secondary' : BLUE_PALE, mt: 0.25 }}>
           {label}
         </Typography>
       </Box>
@@ -81,6 +85,7 @@ function StatTile({ inverted, icon, count, loading, label, hint, onClick }) {
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const { mode, toggle } = useColorMode();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
   const isMobile = useIsMobile();
@@ -133,7 +138,7 @@ export default function Dashboard() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#fff', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
       <AppBar
         position="static"
         elevation={0}
@@ -141,7 +146,7 @@ export default function Dashboard() {
         sx={{ borderBottom: 1, borderColor: 'divider' }}
       >
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography sx={{ fontSize: 15, fontWeight: 500, color: NAVY_DEEP }}>
+          <Typography sx={{ fontSize: 15, fontWeight: 500, color: 'text.primary' }}>
             CitiBank Initiative Tracker
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -150,6 +155,13 @@ export default function Dashboard() {
                 {user?.email}
               </Typography>
             )}
+                        <IconButton
+              aria-label={mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              size="small"
+              onClick={toggle}
+            >
+              {mode === 'light' ? <Brightness4Icon fontSize="small" /> : <Brightness7Icon fontSize="small" />}
+            </IconButton>
             <Button onClick={handleLogout} size="small">
               Sign out
             </Button>
@@ -169,11 +181,11 @@ export default function Dashboard() {
           p: isDesktop ? 5 : 3,
         }}
       >
-        <Typography sx={{ fontSize: isDesktop ? 34 : 28, fontWeight: 500, color: NAVY_DEEP, lineHeight: 1.15 }}>
+        <Typography sx={{ fontSize: isDesktop ? 34 : 28, fontWeight: 500, color: 'text.primary', lineHeight: 1.15 }}>
           Hello, {roleLabel}.
         </Typography>
         <Box sx={{ width: 52, height: 4, bgcolor: RED_ACCENT, my: 1.75 }} />
-        <Typography sx={{ fontSize: 14, color: '#5F5E5A', mb: 4.25 }}>
+        <Typography sx={{ fontSize: 14, color: 'text.secondary', mb: 4.25 }}>
           {today}
           {counts.initiatives !== null && counts.initiatives !== '—' && !loadingCounts
             ? ` · ${counts.initiatives} initiative${counts.initiatives === 1 ? '' : 's'} in flight`

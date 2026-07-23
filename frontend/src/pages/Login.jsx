@@ -75,7 +75,7 @@ export default function Login() {
       <Box
         sx={{
           bgcolor: NAVY,
-          flex: isDesktop ? 1.1 : 'none',
+          flex: isDesktop ? 3 : 'none',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: isDesktop ? 'space-between' : 'center',
@@ -123,7 +123,7 @@ export default function Login() {
       <Box
         sx={{
           bgcolor: '#fff',
-          flex: 1,
+          flex: 7,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',

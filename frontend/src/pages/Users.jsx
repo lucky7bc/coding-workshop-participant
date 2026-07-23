@@ -28,6 +28,9 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useColorMode } from '../context/ColorModeContext';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useIsMobile } from '../hooks/useResponsive';
 
 export default function Users() {
@@ -41,6 +44,7 @@ export default function Users() {
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { mode, toggle } = useColorMode();
   const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
@@ -126,6 +130,13 @@ export default function Users() {
                 {user.email}
               </Typography>
             )}
+                        <IconButton
+              aria-label={mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              size="small"
+              onClick={toggle}
+            >
+              {mode === 'light' ? <Brightness4Icon fontSize="small" /> : <Brightness7Icon fontSize="small" />}
+            </IconButton>
             <Button onClick={handleLogout} size="small">
               Sign out
             </Button>

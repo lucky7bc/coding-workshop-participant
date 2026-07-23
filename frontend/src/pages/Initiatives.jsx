@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
+import Slider from '@mui/material/Slider';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -22,13 +23,16 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useColorMode } from '../context/ColorModeContext';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useIsMobile } from '../hooks/useResponsive';
 
 const NAVY = '#0C447C';
 const NAVY_DEEP = '#042C53';
 
 const STATUS_STYLE = {
-  not_started: { label: 'Not started', bg: '#F1EFE8', color: '#5F5E5A' },
+  not_started: { label: 'Not started', bg: '#F1EFE8', color: 'text.secondary' },
   in_progress: { label: 'In progress', bg: '#E6F1FB', color: '#0C447C' },
   at_risk: { label: 'At risk', bg: '#FAEEDA', color: '#854F0B' },
   delayed: { label: 'Delayed', bg: '#FCEBEB', color: '#A32D2D' },
@@ -45,8 +49,11 @@ function money(value) {
 // per-allocation hours/week × the resource's rate × weeks elapsed
 // (capped at the plan) — the same formula the backend budget endpoint
 // uses, without an extra API call per card.
-function computeSpend(initiative, ratesById) {
-  const weeks = Math.min(initiative.current_week, initiative.time_allocated);
+function computeSpend(initiative, ratesById, weekOverride) {
+  const weeks = Math.min(
+    weekOverride ?? initiative.current_week,
+    initiative.time_allocated
+  );
   return initiative.resources.reduce(
     (sum, link) => sum + link.allocated_hours * weeks * (ratesById[link.resource_id] ?? 0),
     0
@@ -70,8 +77,10 @@ export default function Initiatives() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [simWeek, setSimWeek] = useState(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { mode, toggle } = useColorMode();
   const isMobile = useIsMobile();
   const isAdmin = user?.role === 'admin';
 
@@ -97,7 +106,7 @@ export default function Initiatives() {
           timelines
             .map((t, index) =>
               t.status === 'fulfilled'
-                ? [initRes.data[index].numeric_id, t.value.data.milestones.length]
+                ? [initRes.data[index].numeric_id, t.value.data.milestones]
                 : null
             )
             .filter(Boolean)
@@ -113,6 +122,8 @@ export default function Initiatives() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const maxWeeks = initiatives.reduce((max, i) => Math.max(max, i.time_allocated), 0);
 
   const visibleInitiatives = initiatives.filter((initiative) => {
     const matchesSearch = initiative.name.toLowerCase().includes(search.toLowerCase());
@@ -168,6 +179,13 @@ export default function Initiatives() {
                 {user.email}
               </Typography>
             )}
+                        <IconButton
+              aria-label={mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              size="small"
+              onClick={toggle}
+            >
+              {mode === 'light' ? <Brightness4Icon fontSize="small" /> : <Brightness7Icon fontSize="small" />}
+            </IconButton>
             <Button onClick={handleLogout} size="small">
               Sign out
             </Button>
@@ -187,7 +205,7 @@ export default function Initiatives() {
         <Box sx={{ display: 'flex', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
           <TextField size="small" placeholder="Search initiatives" value={search}
             onChange={(event) => setSearch(event.target.value)} sx={{ flex: 1, minWidth: 200 }}
-            InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: '#888780' }} /></InputAdornment>) }} />
+            InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} /></InputAdornment>) }} />
           <TextField select size="small" value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)} sx={{ minWidth: 150 }}>
             <MenuItem value="all">All statuses</MenuItem>
@@ -196,6 +214,32 @@ export default function Initiatives() {
             ))}
           </TextField>
         </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.secondary', whiteSpace: 'nowrap' }}>
+            Time machine
+          </Typography>
+          <Slider
+            size="small"
+            min={0}
+            max={maxWeeks}
+            value={simWeek ?? 0}
+            onChange={(event, value) => setSimWeek(value)}
+            valueLabelDisplay="auto"
+            sx={{ maxWidth: 300 }}
+            aria-label="Simulate portfolio week"
+          />
+          {simWeek !== null && (
+            <Button size="small" onClick={() => setSimWeek(null)}>
+              Back to today
+            </Button>
+          )}
+        </Box>
+        {simWeek !== null && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Simulating week {simWeek} — spend and overdue markers are projections, nothing is saved.
+          </Alert>
+        )}
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -226,10 +270,19 @@ export default function Initiatives() {
             }}
           >
             {visibleInitiatives.map((initiative) => {
-              const spend = computeSpend(initiative, ratesById);
+              const effWeek = simWeek === null
+                ? initiative.current_week
+                : Math.min(simWeek, initiative.time_allocated);
+              const spend = computeSpend(initiative, ratesById, simWeek === null ? undefined : simWeek);
               const pct = initiative.budget > 0 ? (spend / initiative.budget) * 100 : 0;
               const status = STATUS_STYLE[initiative.status] ?? STATUS_STYLE.not_started;
-              const milestoneCount = milestoneCounts[initiative.numeric_id];
+              const cardMilestones = milestoneCounts[initiative.numeric_id];
+              const milestoneCount = cardMilestones ? cardMilestones.length : undefined;
+              const overdueCount = cardMilestones
+                ? cardMilestones.filter(
+                    (m) => m.status !== 'complete' && (m.status === 'missed' || m.target_week < effWeek)
+                  ).length
+                : 0;
               return (
                 <Paper
                   key={initiative.numeric_id}
@@ -252,7 +305,7 @@ export default function Initiatives() {
                   }}
                 >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.25 }}>
-                    <Typography sx={{ fontSize: 15, fontWeight: 500, color: '#2C2C2A', pr: 1 }}>
+                    <Typography sx={{ fontSize: 15, fontWeight: 500, color: 'text.primary', pr: 1 }}>
                       {initiative.name}
                     </Typography>
                     <Chip
@@ -262,18 +315,23 @@ export default function Initiatives() {
                     />
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography sx={{ fontSize: 12, color: '#888780' }}>
+                    <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
                       {money(spend)} of {money(initiative.budget)}
                     </Typography>
-                    <Typography sx={{ fontSize: 12, fontWeight: 500, color: pct >= 90 ? '#A32D2D' : '#5F5E5A' }}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 500, color: pct >= 90 ? '#A32D2D' : 'text.secondary' }}>
                       {Math.round(pct)}%
                     </Typography>
                   </Box>
                   <Box sx={{ bgcolor: '#F1EFE8', borderRadius: '4px', height: 8, overflow: 'hidden', mb: 1.5 }}>
-                    <Box sx={{ bgcolor: barColor(pct), width: `${Math.min(100, pct)}%`, height: '100%' }} />
+                    <Box sx={{ bgcolor: barColor(pct), width: `${Math.min(100, pct)}%`, height: '100%', transition: 'width 300ms ease, background-color 300ms ease' }} />
                   </Box>
-                  <Typography sx={{ fontSize: 12, color: '#888780' }}>
-                    Week {initiative.current_week} of {initiative.time_allocated} ·{' '}
+                  <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
+                    {overdueCount > 0 && (
+                      <Box component="span" sx={{ color: '#A32D2D', fontWeight: 500 }}>
+                        {overdueCount} overdue ·{' '}
+                      </Box>
+                    )}
+                    Week {effWeek} of {initiative.time_allocated} ·{' '}
                     {initiative.resources.length} resource{initiative.resources.length === 1 ? '' : 's'}
                     {milestoneCount !== undefined
                       ? ` · ${milestoneCount} milestone${milestoneCount === 1 ? '' : 's'}`
