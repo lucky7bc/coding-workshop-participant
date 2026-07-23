@@ -1,3 +1,7 @@
+# FastAPI application entry point. This file sets up the FastAPI app, 
+#configures middleware, registers controllers, and defines the lifespan 
+# context for database connection.
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -16,6 +20,8 @@ from app.core.database import connect_db
 from app.core.errors import AppError
 
 
+# Lifespan context manager for the FastAPI application. This function is called
+# when the application starts and stops, allowing for setup and teardown of resources.
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_db()
@@ -33,14 +39,12 @@ app.add_middleware(
 )
 
 
+# Custom exception handler for AppError. This handler returns a JSON response
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError):
     return JSONResponse(status_code=exc.status_code, content={"error": exc.message})
 
 
-# Each @RestController class exposes `.router` — a real APIRouter — built by
-# the annotations.py decorator. Registering them here is the direct analog
-# of the Node backend's routes/index.ts mounting each router under /api.
 for controller in [
     AuthController,
     ResourceController,

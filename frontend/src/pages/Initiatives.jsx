@@ -217,7 +217,7 @@ export default function Initiatives() {
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
           <Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.secondary', whiteSpace: 'nowrap' }}>
-            Time machine
+            Simulate Budget
           </Typography>
           <Slider
             size="small"

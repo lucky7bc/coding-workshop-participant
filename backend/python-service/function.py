@@ -1,13 +1,5 @@
-# AWS Lambda entrypoint. Per the workshop's Lambda config (lambda.tf), the
-# expected handler is "function.handler" — a bare Lambda handler, not an
-# ASGI server. Mangum bridges that gap: it adapts our existing FastAPI app
-# (unchanged) to the Lambda Function URL event format this project's
-# infrastructure uses (`create_lambda_function_url = true` in lambda.tf).
-#
-# Verified before writing this: Mangum explicitly lists "Function URL" as a
-# supported event source (not just API Gateway), and its FastAPI
-# integration is exactly this — no framework changes needed elsewhere in
-# app/.
+# AWS Lambda entrypoint. Lambda configures the handler as `function.handler` 
+# in the SAM template.
 from mangum import Mangum
 
 from app.main import app

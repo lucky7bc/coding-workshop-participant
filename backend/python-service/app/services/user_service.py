@@ -29,6 +29,7 @@ class UserService:
     async def update_role(user_id: str, role: str, acting_user_id: str) -> dict:
         # Self-demotion guard: the last admin demoting themselves would
         # lock everyone out of user management permanently
+        if user_id == acting_user_id:
             raise AppError(400, "You can't change your own admin role")
         updated = await UserRepository.update_role(user_id, role)
         if not updated:
