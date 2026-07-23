@@ -11,6 +11,8 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Toolbar from '@mui/material/Toolbar';
 import Tooltip from '@mui/material/Tooltip';
@@ -63,6 +65,13 @@ export default function InitiativeDetail() {
   const [newName, setNewName] = useState('');
   const [newWeek, setNewWeek] = useState('');
   const [saving, setSaving] = useState(false);
+  const [statusAnchor, setStatusAnchor] = useState(null);
+  const [allResources, setAllResources] = useState([]);
+  const [allocOpen, setAllocOpen] = useState(false);
+  const [allocResourceId, setAllocResourceId] = useState('');
+  const [allocHours, setAllocHours] = useState('');
+  const [editHoursFor, setEditHoursFor] = useState(null);
+  const [editHoursValue, setEditHoursValue] = useState('');
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const isMobile = useIsMobile();
@@ -73,11 +82,13 @@ export default function InitiativeDetail() {
       api.get(`/api/initiatives/${id}`),
       api.get(`/api/initiatives/${id}/budget`),
       api.get(`/api/initiatives/${id}/timeline`),
+      api.get('/api/resources'),
     ]);
-    const [init, budg, timeline] = results;
+    const [init, budg, timeline, res] = results;
     if (init.status === 'fulfilled') setInitiative(init.value.data);
     if (budg.status === 'fulfilled') setBudget(budg.value.data);
     if (timeline.status === 'fulfilled') setMilestones(timeline.value.data.milestones);
+    if (res.status === 'fulfilled') setAllResources(res.value.data);
     if (init.status === 'rejected') {
       setError(init.reason?.response?.data?.error || 'Could not load this initiative.');
     }
@@ -128,6 +139,66 @@ export default function InitiativeDetail() {
       await load();
     } catch (err) {
       setError(err.response?.data?.error || 'Could not delete milestone.');
+    }
+  }
+
+  async function handleAllocate() {
+    setSaving(true);
+    setError('');
+    try {
+      await api.post(`/api/initiatives/${id}/resources`, {
+        resource_id: Number(allocResourceId),
+        allocated_hours: Number(allocHours),
+      });
+      setAllocOpen(false);
+      setAllocResourceId('');
+      setAllocHours('');
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not allocate resource.');
+      setAllocOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleUpdateHours() {
+    setSaving(true);
+    setError('');
+    try {
+      await api.patch(`/api/initiatives/${id}/resources/${editHoursFor.resource_id}`, {
+        allocated_hours: Number(editHoursValue),
+      });
+      setEditHoursFor(null);
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not update hours.');
+      setEditHoursFor(null);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRemoveAllocation(link) {
+    const name = allResources.find((r) => r.numeric_id === link.resource_id)?.name || `Resource ${link.resource_id}`;
+    if (!window.confirm(`Remove ${name} from this initiative?`)) return;
+    setError('');
+    try {
+      await api.delete(`/api/initiatives/${id}/resources/${link.resource_id}`);
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not remove allocation.');
+    }
+  }
+
+  async function changeInitiativeStatus(next) {
+    setStatusAnchor(null);
+    setError('');
+    try {
+      await api.put(`/api/initiatives/${id}`, { status: next });
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not update status.');
     }
   }
 
@@ -191,11 +262,27 @@ export default function InitiativeDetail() {
                   {initiative.resources.length} resource{initiative.resources.length === 1 ? '' : 's'} allocated
                 </Typography>
               </Box>
-              <Chip
-                size="small"
-                label={INITIATIVE_STATUS_LABEL[initiative.status] ?? initiative.status}
-                sx={{ bgcolor: CHIP_BG, color: NAVY, fontWeight: 500 }}
-              />
+              <Box>
+                <Tooltip title={isAdmin ? 'Click to change status' : ''}>
+                  <Chip
+                    size="small"
+                    label={INITIATIVE_STATUS_LABEL[initiative.status] ?? initiative.status}
+                    onClick={isAdmin ? (event) => setStatusAnchor(event.currentTarget) : undefined}
+                    sx={{ bgcolor: CHIP_BG, color: NAVY, fontWeight: 500, cursor: isAdmin ? 'pointer' : 'default' }}
+                  />
+                </Tooltip>
+                <Menu anchorEl={statusAnchor} open={Boolean(statusAnchor)} onClose={() => setStatusAnchor(null)}>
+                  {Object.entries(INITIATIVE_STATUS_LABEL).map(([value, label]) => (
+                    <MenuItem
+                      key={value}
+                      selected={value === initiative.status}
+                      onClick={() => changeInitiativeStatus(value)}
+                    >
+                      {label}
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </Box>
             </Box>
 
             {budget && (
@@ -238,6 +325,59 @@ export default function InitiativeDetail() {
                 </Typography>
               </Box>
             )}
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+              <Typography sx={{ fontSize: 15, fontWeight: 500, color: NAVY_DEEP }}>Allocated resources</Typography>
+              {isAdmin && (
+                <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => setAllocOpen(true)}>
+                  Allocate resource
+                </Button>
+              )}
+            </Box>
+            <Box sx={{ mb: 4 }}>
+              {initiative.resources.length === 0 ? (
+                <Typography sx={{ fontSize: 13, color: '#888780' }}>
+                  No resources allocated.{isAdmin ? ' Allocate one to start tracking spend.' : ''}
+                </Typography>
+              ) : (
+                initiative.resources.map((link) => {
+                  const resource = allResources.find((r) => r.numeric_id === link.resource_id);
+                  return (
+                    <Box
+                      key={link.resource_id}
+                      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1, borderBottom: '0.5px solid', borderColor: 'divider' }}
+                    >
+                      <Typography sx={{ fontSize: 14 }}>
+                        {resource ? resource.name : `Resource ${link.resource_id}`}
+                        <Box component="span" sx={{ color: '#888780', fontSize: 13 }}>
+                          {' '}· {link.allocated_hours} hrs/week{resource ? ` · $${resource.rate.toLocaleString()}/hr` : ''}
+                        </Box>
+                      </Typography>
+                      {isAdmin && (
+                        <Box>
+                          <Button
+                            size="small"
+                            onClick={() => {
+                              setEditHoursFor(link);
+                              setEditHoursValue(String(link.allocated_hours));
+                            }}
+                          >
+                            Edit hours
+                          </Button>
+                          <IconButton
+                            aria-label="Remove allocation"
+                            size="small"
+                            onClick={() => handleRemoveAllocation(link)}
+                          >
+                            <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Box>
+                      )}
+                    </Box>
+                  );
+                })
+              )}
+            </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography sx={{ fontSize: 15, fontWeight: 500, color: NAVY_DEEP }}>Milestones</Typography>
@@ -308,6 +448,70 @@ export default function InitiativeDetail() {
           </>
         )}
       </Box>
+
+      <Dialog open={allocOpen} onClose={() => setAllocOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Allocate resource</DialogTitle>
+        <DialogContent>
+          <TextField
+            select
+            label="Resource"
+            fullWidth
+            margin="normal"
+            value={allocResourceId}
+            onChange={(event) => setAllocResourceId(event.target.value)}
+          >
+            {allResources
+              .filter((r) => !initiative?.resources.some((link) => link.resource_id === r.numeric_id))
+              .map((r) => (
+                <MenuItem key={r.numeric_id} value={r.numeric_id}>
+                  {r.name} (${r.rate.toLocaleString()}/hr)
+                </MenuItem>
+              ))}
+          </TextField>
+          <TextField
+            label="Hours per week"
+            type="number"
+            fullWidth
+            margin="normal"
+            value={allocHours}
+            onChange={(event) => setAllocHours(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAllocOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleAllocate}
+            disabled={saving || allocResourceId === '' || allocHours === '' || Number(allocHours) <= 0}
+          >
+            {saving ? <CircularProgress size={20} /> : 'Allocate'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(editHoursFor)} onClose={() => setEditHoursFor(null)} fullWidth maxWidth="xs">
+        <DialogTitle>Edit hours per week</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Hours per week"
+            type="number"
+            fullWidth
+            margin="normal"
+            value={editHoursValue}
+            onChange={(event) => setEditHoursValue(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditHoursFor(null)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdateHours}
+            disabled={saving || editHoursValue === '' || Number(editHoursValue) <= 0}
+          >
+            {saving ? <CircularProgress size={20} /> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={addOpen} onClose={() => setAddOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>Add milestone</DialogTitle>
