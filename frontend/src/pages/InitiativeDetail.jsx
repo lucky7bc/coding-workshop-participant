@@ -5,6 +5,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
+import Checkbox from '@mui/material/Checkbox';
 import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -72,6 +73,9 @@ export default function InitiativeDetail() {
   const [allocHours, setAllocHours] = useState('');
   const [editHoursFor, setEditHoursFor] = useState(null);
   const [editHoursValue, setEditHoursValue] = useState('');
+  const [deliverables, setDeliverables] = useState([]);
+  const [delivOpen, setDelivOpen] = useState(false);
+  const [delivName, setDelivName] = useState('');
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const isMobile = useIsMobile();
@@ -83,12 +87,14 @@ export default function InitiativeDetail() {
       api.get(`/api/initiatives/${id}/budget`),
       api.get(`/api/initiatives/${id}/timeline`),
       api.get('/api/resources'),
+      api.get(`/api/initiatives/${id}/deliverables`),
     ]);
-    const [init, budg, timeline, res] = results;
+    const [init, budg, timeline, res, deliv] = results;
     if (init.status === 'fulfilled') setInitiative(init.value.data);
     if (budg.status === 'fulfilled') setBudget(budg.value.data);
     if (timeline.status === 'fulfilled') setMilestones(timeline.value.data.milestones);
     if (res.status === 'fulfilled') setAllResources(res.value.data);
+    if (deliv.status === 'fulfilled') setDeliverables(deliv.value.data);
     if (init.status === 'rejected') {
       setError(init.reason?.response?.data?.error || 'Could not load this initiative.');
     }
@@ -191,6 +197,46 @@ export default function InitiativeDetail() {
     }
   }
 
+  async function handleAddDeliverable() {
+    setSaving(true);
+    setError('');
+    try {
+      await api.post(`/api/initiatives/${id}/deliverables`, { name: delivName });
+      setDelivOpen(false);
+      setDelivName('');
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not add deliverable.');
+      setDelivOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleDeliverable(deliverable) {
+    if (!isAdmin) return;
+    setError('');
+    try {
+      await api.patch(`/api/initiatives/${id}/deliverables/${deliverable._id}`, {
+        completed: !deliverable.completed,
+      });
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not update deliverable.');
+    }
+  }
+
+  async function handleDeleteDeliverable(deliverable) {
+    if (!window.confirm(`Delete deliverable "${deliverable.name}"?`)) return;
+    setError('');
+    try {
+      await api.delete(`/api/initiatives/${id}/deliverables/${deliverable._id}`);
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not delete deliverable.');
+    }
+  }
+
   async function changeInitiativeStatus(next) {
     setStatusAnchor(null);
     setError('');
@@ -208,6 +254,18 @@ export default function InitiativeDetail() {
   }
 
   const spendPct = budget && budget.budget > 0 ? Math.min(100, (budget.total_spend / budget.budget) * 100) : 0;
+
+  const overdueMilestones = initiative
+    ? milestones.filter(
+        (m) => m.status !== 'complete' && (m.status === 'missed' || m.target_week < initiative.current_week)
+      ).length
+    : 0;
+  const overBudgetPace = budget ? budget.projected_at_completion > budget.budget : false;
+  const riskSignals = [];
+  if (overdueMilestones > 0) {
+    riskSignals.push(`${overdueMilestones} overdue milestone${overdueMilestones === 1 ? '' : 's'}`);
+  }
+  if (overBudgetPace) riskSignals.push('spending pace exceeds budget');
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -284,6 +342,15 @@ export default function InitiativeDetail() {
                 </Menu>
               </Box>
             </Box>
+
+            {riskSignals.length > 0 && (
+              <Alert severity="warning" sx={{ mb: 3 }}>
+                At-risk signals: {riskSignals.join(' · ')}
+                {isAdmin && initiative.status !== 'at_risk' && initiative.status !== 'delayed'
+                  ? ' — consider updating the status'
+                  : ''}
+              </Alert>
+            )}
 
             {budget && (
               <Box sx={{ mb: 4 }}>
@@ -445,6 +512,69 @@ export default function InitiativeDetail() {
                 })}
               </Box>
             )}
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, mb: 1.5 }}>
+              <Typography sx={{ fontSize: 15, fontWeight: 500, color: NAVY_DEEP }}>
+                Deliverables
+                {deliverables.length > 0 && (
+                  <Box component="span" sx={{ fontWeight: 400, fontSize: 13, color: '#888780', ml: 1 }}>
+                    {deliverables.filter((d) => d.completed).length} of {deliverables.length} complete
+                  </Box>
+                )}
+              </Typography>
+              {isAdmin && (
+                <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => setDelivOpen(true)}>
+                  Add deliverable
+                </Button>
+              )}
+            </Box>
+            {deliverables.length === 0 ? (
+              <Typography sx={{ fontSize: 13, color: '#888780' }}>
+                No deliverables yet.{isAdmin ? ' Add the first one.' : ''}
+              </Typography>
+            ) : (
+              <Box>
+                {deliverables.map((deliverable) => (
+                  <Box
+                    key={deliverable._id}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      py: 0.25,
+                      '&:not(:last-child)': { borderBottom: '0.5px solid', borderColor: 'divider' },
+                    }}
+                  >
+                    <Checkbox
+                      size="small"
+                      checked={deliverable.completed}
+                      disabled={!isAdmin}
+                      onChange={() => toggleDeliverable(deliverable)}
+                      inputProps={{ 'aria-label': `Mark ${deliverable.name} ${deliverable.completed ? 'incomplete' : 'complete'}` }}
+                    />
+                    <Typography
+                      sx={{
+                        fontSize: 14,
+                        flex: 1,
+                        color: deliverable.completed ? '#888780' : '#2C2C2A',
+                        textDecoration: deliverable.completed ? 'line-through' : 'none',
+                      }}
+                    >
+                      {deliverable.name}
+                    </Typography>
+                    {isAdmin && (
+                      <IconButton
+                        aria-label={`Delete deliverable ${deliverable.name}`}
+                        size="small"
+                        onClick={() => handleDeleteDeliverable(deliverable)}
+                      >
+                        <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            )}
           </>
         )}
       </Box>
@@ -509,6 +639,26 @@ export default function InitiativeDetail() {
             disabled={saving || editHoursValue === '' || Number(editHoursValue) <= 0}
           >
             {saving ? <CircularProgress size={20} /> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={delivOpen} onClose={() => setDelivOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Add deliverable</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Name"
+            placeholder="API documentation"
+            fullWidth
+            margin="normal"
+            value={delivName}
+            onChange={(event) => setDelivName(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDelivOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleAddDeliverable} disabled={saving || !delivName}>
+            {saving ? <CircularProgress size={20} /> : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
