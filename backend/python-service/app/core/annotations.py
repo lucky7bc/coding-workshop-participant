@@ -25,7 +25,7 @@ from typing import Callable
 
 from fastapi import APIRouter
 
-
+# Metadata for route definitions
 @dataclass
 class _RouteMeta:
     method: str
@@ -33,6 +33,8 @@ class _RouteMeta:
     status_code: int | None
 
 
+# _mapping is a factory function that creates decorators for 
+# HTTP methods (GET, POST, etc.).
 def _mapping(method: str):
     def decorator(path: str = "", status_code: int | None = None):
         def wrapper(func: Callable) -> Callable:
@@ -44,20 +46,18 @@ def _mapping(method: str):
     return decorator
 
 
+# Define decorators for each HTTP method using the _mapping factory.
 GetMapping = _mapping("GET")
 PostMapping = _mapping("POST")
 PutMapping = _mapping("PUT")
 PatchMapping = _mapping("PATCH")
 DeleteMapping = _mapping("DELETE")
 
-
+# RestController is a class decorator that registers the decorated class's methods
 def RestController(prefix: str = "", tags: list[str] | None = None):
-    """Class decorator ~ Spring's @RestController + @RequestMapping(prefix)
-    combined. Scans the class for methods tagged by @GetMapping etc. and
-    registers each onto a real APIRouter, exposed as `cls.router` for
-    main.py to `app.include_router(...)`.
-    """
 
+    # The decorator function that processes the class and registers 
+    # its methods as API routes.
     def decorator(cls):
         router = APIRouter(prefix=prefix, tags=tags or [cls.__name__])
         instance = cls()

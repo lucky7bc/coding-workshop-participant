@@ -1,3 +1,6 @@
+# This module provides security-related functions for password hashing, 
+# token signing, and verification.
+
 import hashlib
 from datetime import datetime, timedelta, timezone
 
@@ -5,7 +8,6 @@ import bcrypt
 import jwt
 
 from app.core.config import settings
-
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=12)).decode()

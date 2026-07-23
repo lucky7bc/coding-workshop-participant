@@ -1,3 +1,5 @@
+# This module handles database connections and initialization for the application.
+
 from typing import Optional
 
 from beanie import init_beanie
@@ -15,6 +17,8 @@ from app.models.user import User
 _client: Optional[AsyncMongoClient] = None
 
 
+# _build_mongo_kwargs constructs the keyword arguments for the 
+# AsyncMongoClient based on the application settings.
 def _build_mongo_kwargs() -> dict:
     """
     Mirrors backend/_examples/python-service/mongo_service.py's exact
@@ -42,15 +46,12 @@ def _build_mongo_kwargs() -> dict:
         kwargs.update(tls=True, tlsAllowInvalidCertificates=True, retryWrites=False)
     return kwargs
 
-
+# Initializes the database connection and sets up 
+# Beanie ODM with the specified document models.
 async def connect_db() -> None:
     global _client
     _client = AsyncMongoClient(**_build_mongo_kwargs())
 
-    # See config.py's comment on mongo_name / mongo_local_db_name — this is
-    # the reconciliation of the docs table ("MONGO_NAME: MongoDB db name")
-    # against the reference example (which only ever uses MONGO_NAME as
-    # authSource, never as a working-database selector).
     database = _client[settings.mongo_database_name]
 
     await init_beanie(
@@ -59,6 +60,8 @@ async def connect_db() -> None:
     )
 
 
+# Returns the initialized AsyncMongoClient instance. 
+# Raises a RuntimeError if the database has not been initialized yet.
 def get_db_client() -> AsyncMongoClient:
     if _client is None:
         raise RuntimeError("Database not initialized — connect_db() must run before get_db_client() is used")

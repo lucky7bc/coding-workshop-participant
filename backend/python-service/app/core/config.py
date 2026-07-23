@@ -1,14 +1,15 @@
+# This module defines the application settings using Pydantic's BaseSettings,
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# The Settings class defines the configuration for the application, 
+# including database and JWT settings.
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     port: int = 4000
 
-    # Workshop-injected Lambda environment contract (docs/full-stack.md,
-    # "Database Environment Variables") — five discrete vars, not one
-    # connection string like our original standalone build used.
     is_local: bool = True
     mongo_host: str = "localhost"
     mongo_port: int = 27017
@@ -16,8 +17,6 @@ class Settings(BaseSettings):
     mongo_user: str = ""
     mongo_pass: str = ""
 
-    # Not part of the workshop's env contract — our own fallback for the
-    # working database name when MONGO_NAME is empty (local dev).
     mongo_database_name: str = "initiative_tracking_system"
 
     jwt_access_secret: str
